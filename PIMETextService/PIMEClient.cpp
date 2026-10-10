@@ -87,11 +87,22 @@ void Client::addKeyEventToRpcRequest(json& request, Ime::KeyEvent& keyEvent) {
 }
 
 bool Client::handleRpcResponse(json& msg, Ime::EditSession* session) {
-	bool success = msg.value("success", false);
-	if (success) {
-		updateStatus(msg, session);
+	// msg is still null if the RPC call failed (e.g. PIMELauncher is not running yet).
+	// Unlike jsoncpp, nlohmann::json throws on type mismatches, and any exception
+	// escaping from here unwinds into the host process (explorer.exe, etc.) and crashes it.
+	if (!msg.is_object()) {
+		return false;
 	}
-	return success;
+	try {
+		bool success = msg.value("success", false);
+		if (success) {
+			updateStatus(msg, session);
+		}
+		return success;
+	}
+	catch (const json::exception&) {
+		return false;
+	}
 }
 
 void Client::updateUI(json& data) {
