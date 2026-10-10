@@ -54,6 +54,19 @@ bool uuidFromString(const char* uuidStr, UUID& result) {
 	return SUCCEEDED(CLSIDFromString(utf16UuidStr.c_str(), &result));
 }
 
+// Read the "return" field like jsoncpp's asBool() did in PIME 1.x:
+// python/node backends send a boolean, while go-backend sends an integer.
+static bool returnValueToBool(const json& ret) {
+	auto it = ret.find("return");
+	if (it == ret.end())
+		return false;
+	if (it->is_boolean())
+		return it->get<bool>();
+	if (it->is_number())
+		return it->get<double>() != 0;
+	return false;
+}
+
 Client::Client(TextService* service, REFIID langProfileGuid):
 	textService_(service),
 	pipe_(INVALID_HANDLE_VALUE),
@@ -423,7 +436,7 @@ bool Client::filterKeyDown(Ime::KeyEvent& keyEvent) {
 	json ret;
 	callRpcMethod(req, ret);
 	if (handleRpcResponse(ret)) {
-		return ret.value("return", false);
+		return returnValueToBool(ret);
 	}
 	return false;
 }
@@ -435,7 +448,7 @@ bool Client::onKeyDown(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
 	json ret;
 	callRpcMethod(req, ret);
 	if (handleRpcResponse(ret, session)) {
-		return ret.value("return", false);
+		return returnValueToBool(ret);
 	}
 	return false;
 }
@@ -447,7 +460,7 @@ bool Client::filterKeyUp(Ime::KeyEvent& keyEvent) {
 	json ret;
 	callRpcMethod(req, ret);
 	if (handleRpcResponse(ret)) {
-		return ret.value("return", false);
+		return returnValueToBool(ret);
 	}
 	return false;
 }
@@ -459,7 +472,7 @@ bool Client::onKeyUp(Ime::KeyEvent& keyEvent, Ime::EditSession* session) {
 	json ret;
 	callRpcMethod(req, ret);
 	if (handleRpcResponse(ret, session)) {
-		return ret.value("return", false);
+		return returnValueToBool(ret);
 	}
 	return false;
 }
@@ -473,7 +486,7 @@ bool Client::onPreservedKey(const GUID& guid) {
 		json ret;
 		callRpcMethod(req, ret);
 		if (handleRpcResponse(ret)) {
-			return ret.value("return", false);
+			return returnValueToBool(ret);
 		}
 	}
 	return false;
@@ -487,7 +500,7 @@ bool Client::onCommand(UINT id, Ime::TextService::CommandType type) {
 	json ret;
 	callRpcMethod(req, ret);
 	if (handleRpcResponse(ret)) {
-		return ret.value("return", false);
+		return returnValueToBool(ret);
 	}
 	return false;
 }
